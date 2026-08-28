@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 5분 상식 퀴즈 (30문제 풀)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .quiz-container { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 420px; text-align: center; }
+        .timer-box { font-size: 18px; font-weight: bold; color: #e53e3e; margin-bottom: 15px; background-color: #fff5f5; padding: 8px 15px; border-radius: 6px; display: inline-block; }
+        h2 { margin-bottom: 15px; color: #333; font-size: 20px; line-height: 1.4; }
+        .feedback { font-size: 20px; font-weight: bold; min-height: 30px; margin-bottom: 15px; }
+        .btn-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .btn { padding: 12px; border: 1px solid #ddd; border-radius: 8px; background-color: #fafafa; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn:hover:not(:disabled) { background-color: #e2e8f0; }
+        .btn:disabled { cursor: not-allowed; }
+        .next-btn { padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; display: none; width: 100%; }
+        .restart-btn { margin-top: 15px; width: 100%; background-color: #3182ce; color: white; font-size: 16px; padding: 12px; border-radius: 8px; border: none; cursor: pointer; }
+        .restart-btn:hover { background-color: #2b6cb0; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="quiz-box">
+        <div class="timer-box">⏱️ 남은 시간: <span id="time-left">20</span>초</div>
+        <h2 id="question">질문이 여기에 나옵니다.</h2>
+        <div id="feedback" class="feedback"></div>
+        <div id="answer-buttons" class="btn-grid"></div>
+        <button id="next-btn" class="next-btn" onclick="nextQuestion()">다음 문제</button>
+    </div>
+    <div id="result-box" style="display: none;">
+        <h2>🎉 퀴즈 종료!</h2>
+        <p id="score-text" style="font-size: 18px; line-height: 1.6;"></p>
+        <button class="restart-btn" onclick="restartQuiz()">🔄 새로운 무작위 5문제 도전하기</button>
+    </div>
+</div>
+
+<script>
+    // 30개의 상식 문제 데이터
+    const questionsPool = [
+        { question: "우리나라에서 흐르는 길이가 가장 긴 강은?", answers: [ { text: "한강", correct: false }, { text: "낙동강", correct: true }, { text: "금강", correct: false }, { text: "섬진강", correct: false } ] },
+        { question: "훈민정음 반포를 기념하는 한글날은?", answers: [ { text: "8월 15일", correct: false }, { text: "10월 3일", correct: false }, { text: "10월 9일", correct: true }, { text: "7월 17일", correct: false } ] },
+        { question: "조선시대 왕과 왕비의 신주를 모신 유네스코 세계유산은?", answers: [ { text: "종묘", correct: true }, { text: "경복궁", correct: false }, { text: "창덕궁", correct: false }, { text: "불국사", correct: false } ] },
+        { question: "조선시대 실록 등에 기록된 독도의 옛 이름은?", answers: [ { text: "탐라국", correct: false }, { text: "우산도", correct: true }, { text: "청해진", correct: false }, { text: "거문도", correct: false } ] },
+        { question: "1년 중 낮이 가장 길고 밤이 가장 짧은 절기는?", answers: [ { text: "춘분", correct: false }, { text: "입추", correct: false }, { text: "동지", correct: false }, { text: "하지", correct: true } ] },
+        { question: "현존하는 세계에서 가장 오래된 금속활자 인쇄본은?", answers: [ { text: "팔만대장경", correct: false }, { text: "직지심체요절", correct: true }, { text: "삼국유사", correct: false }, { text: "무구정광대다라니경", correct: false } ] },
+        { question: "대한민국 헌법 제1조 1항에 들어가는 문장은?", answers: [ { text: "대한민국은 민주공화국이다.", correct: true }, { text: "모든 권력은 국민으로부터 나온다.", correct: false }, { text: "대한민국은 문화국가이다.", correct: false }, { text: "모든 국민은 법 앞에 평등하다.", correct: false } ] },
+        { question: "이순신 장군이 12척의 배로 133척의 왜선을 격파한 해전은?", answers: [ { text: "한산도 대첩", correct: false }, { text: "명량 대첩", correct: true }, { text: "노량 해전", correct: false }, { text: "옥포 해전", correct: false } ] },
+        { question: "태극기 4괘(건곤감리) 중 '하늘'을 상징하는 괘는?", answers: [ { text: "건(乾)", correct: true }, { text: "곤(坤)", correct: false }, { text: "감(坎)", correct: false }, { text: "리(離)", correct: false } ] },
+        { question: "유네스코 무형유산으로 등재된 한국 고유의 문화는?", answers: [ { text: "장독 문화", correct: false }, { text: "품앗이", correct: false }, { text: "김장 문화", correct: true }, { text: "세시풍속", correct: false } ] },
+        { question: "지구상에서 면적이 가장 큰 섬은?", answers: [ { text: "그린란드", correct: true }, { text: "마다가스카르", correct: false }, { text: "제주도", correct: false }, { text: "영국 본도", correct: false } ] },
+        { question: "태양계에서 가장 큰 행성은?", answers: [ { text: "토성", correct: false }, { text: "목성", correct: true }, { text: "지구", correct: false }, { text: "천왕성", correct: false } ] },
+        { question: "조선 왕조를 창건한 제1대 왕은?", answers: [ { text: "세종대왕", correct: false }, { text: "태종 이방원", correct: false }, { text: "태조 이성계", correct: true }, { text: "정조", correct: false } ] },
+        { question: "표준 피아노의 총 건반 개수는?", answers: [ { text: "66개", correct: false }, { text: "77개", correct: false }, { text: "88개", correct: true }, { text: "99개", correct: false } ] },
+        { question: "빛의 속도는 1초에 약 몇 km를 이동할까요?", answers: [ { text: "약 15만 km", correct: false }, { text: "약 30만 km", correct: true }, { text: "약 50만 km", correct: false }, { text: "약 100만 km", correct: false } ] },
+        { question: "대한민국 5만원 권 지폐에 그려진 인물은?", answers: [ { text: "신사임당", correct: true }, { text: "율곡 이이", correct: false }, { text: "퇴계 이황", correct: false }, { text: "세종대왕", correct: false } ] },
+        { question: "올림픽 오륜기의 5개 고리 색상에 해당하지 않는 것은?", answers: [ { text: "파랑", correct: false }, { text: "노랑", correct: false }, { text: "보라", correct: true }, { text: "초록", correct: false } ] },
+        { question: "그리스 신화에서 최고신 제우스의 아내이자 여신의 여왕은?", answers: [ { text: "아테나", correct: false }, { text: "아프로디테", correct: false }, { text: "헤라", correct: true }, { text: "아르테미스", correct: false } ] },
+        { question: "세계에서 가장 높은 에베레스트산이 위치한 산맥은?", answers: [ { text: "알프스 산맥", correct: false }, { text: "안데스 산맥", correct: false }, { text: "히말라야 산맥", correct: true }, { text: "로키 산맥", correct: false } ] },
+        { question: "원소기호 'O'가 나타내는 원소는?", answers: [ { text: "수소", correct: false }, { text: "산소", correct: true }, { text: "탄소", correct: false }, { text: "질소", correct: false } ] },
+        { question: "우리나라의 국화(國花)는 무엇일까요?", answers: [ { text: "장미", correct: false }, { text: "진달래", correct: false }, { text: "무궁화", correct: true }, { text: "국화", correct: false } ] },
+        { question: "제주도의 옛 이름은 무엇일까요?", answers: [ { text: "우산국", correct: false }, { text: "탐라국", correct: true }, { text: "서라벌", correct: false }, { text: "한성", correct: false } ] },
+        { question: "1945년 8월 15일, 우리나라가 일본으로부터 광복된 것을 기념하는 날은?", answers: [ { text: "제헌절", correct: false }, { text: "삼일절", correct: false }, { text: "광복절", correct: true }, { text: "개천절", correct: false } ] },
+        { question: "세계에서 가장 넓은 바다는 어디일까요?", answers: [ { text: "대서양", correct: false }, { text: "인도양", correct: false }, { text: "태평양", correct: true }, { text: "북극해", correct: false } ] },
+        { question: "프랑스의 수도는 어디일까요?", answers: [ { text: "런던", correct: false }, { text: "로마", correct: false }, { text: "파리", correct: true }, { text: "베를린", correct: false } ] },
+        { question: "셰익스피어의 4대 비극이 아닌 것은?", answers: [ { text: "햄릿", correct: false }, { text: "리어왕", correct: false }, { text: "맥베스", correct: false }, { text: "로미오와 줄리엣", correct: true } ] },
+        { question: "뼈와 치아를 구성하며 우유에 많이 들어있는 영양소는?", answers: [ { text: "철분", correct: false }, { text: "칼슘", correct: true }, { text: "비타민C", correct: false }, { text: "단백질", correct: false } ] },
+        { question: "컴퓨터에서 임시로 데이터를 기억하는 장치(메모리)를 부르는 말은?", answers: [ { text: "CPU", correct: false }, { text: "HDD", correct: false }, { text: "RAM", correct: true }, { text: "SSD", correct: false } ] },
+        { question: "조선 후기 실학자 정약용이 유배지에서 저술한 지방행정 지침서는?", answers: [ { text: "목민심서", correct: true }, { text: "훈민정음", correct: false }, { text: "동의보감", correct: false }, { text: "삼국사기", correct: false } ] },
+        { question: "거미의 다리는 총 몇 개일까요?", answers: [ { text: "4개", correct: false }, { text: "6개", correct: false }, { text: "8개", correct: true }, { text: "10개", correct: false } ] }
+    ];
+
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    const QUESTION_TIME = 20; 
+    let timeLeft = QUESTION_TIME;
+    let timerInterval;
+
+    function shuffle(array) {
+        let tempArray = [...array];
+        for (let i = tempArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tempArray[i], tempArray[j]] = [tempArray[j], tempArray[i]];
+        }
+        return tempArray;
+    }
+
+    function startQuiz() {
+        const shuffledPool = shuffle(questionsPool);
+        currentQuestions = shuffledPool.slice(0, 5); // 30개 중 랜덤 5개 추출
+        currentQuestions.forEach(q => q.answers = shuffle(q.answers));
+
+        currentQuestionIndex = 0;
+        score = 0;
+        document.getElementById("quiz-box").style.display = "block";
+        document.getElementById("result-box").style.display = "none";
+        showQuestion();
+    }
+
+    function showQuestion() {
+        resetState();
+        let currentQuestion = currentQuestions[currentQuestionIndex];
+        document.getElementById("question").innerText = `Q${currentQuestionIndex + 1}. ${currentQuestion.question}`;
+
+        currentQuestion.answers.forEach(answer => {
+            const button = document.createElement("button");
+            button.innerText = answer.text;
+            button.classList.add("btn");
+            button.onclick = () => selectAnswer(button, answer.correct);
+            document.getElementById("answer-buttons").appendChild(button);
+        });
+        startTimer();
+    }
+
+    function resetState() {
+        clearInterval(timerInterval);
+        document.getElementById("feedback").innerText = ""; 
+        document.getElementById("next-btn").style.display = "none";
+        const answerButtons = document.getElementById("answer-buttons");
+        while (answerButtons.firstChild) { answerButtons.removeChild(answerButtons.firstChild); }
+    }
+
+    function startTimer() {
+        timeLeft = QUESTION_TIME;
+        document.getElementById("time-left").innerText = timeLeft;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById("time-left").innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timeOut();
+            }
+        }, 1000);
+    }
+
+    function timeOut() {
+        highlightAnswers();
+        const feedbackEl = document.getElementById("feedback");
+        feedbackEl.innerText = "⏰ 시간 초과!";
+        feedbackEl.style.color = "#d97706";
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function selectAnswer(selectedBtn, isCorrect) {
+        clearInterval(timerInterval);
+        highlightAnswers();
+        const feedbackEl = document.getElementById("feedback");
+
+        if (isCorrect) {
+            selectedBtn.style.backgroundColor = "#a8e6cf";
+            score++;
+            feedbackEl.innerText = "🎉 정답입니다!";
+            feedbackEl.style.color = "#2e7d32";
+        } else {
+            selectedBtn.style.backgroundColor = "#ffaaa5";
+            feedbackEl.innerText = "❌ 오답입니다!";
+            feedbackEl.style.color = "#c62828";
+        }
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function highlightAnswers() {
+        const currentQuestion = currentQuestions[currentQuestionIndex];
+        const buttons = document.getElementById("answer-buttons").children;
+        Array.from(buttons).forEach((button, index) => {
+            button.disabled = true;
+            if (currentQuestion.answers[index].correct) {
+                button.style.backgroundColor = "#a8e6cf"; 
+            }
+        });
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < currentQuestions.length) {
+            showQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        clearInterval(timerInterval);
+        document.getElementById("quiz-box").style.display = "none";
+        document.getElementById("result-box").style.display = "block";
+        
+        let feedbackMessage = "";
+        if (score === 5) feedbackMessage = "<br>👑 만점입니다! 대단해요!";
+        else if (score >= 3) feedbackMessage = "<br>👍 훌륭한 성적입니다!";
+        else feedbackMessage = "<br>💡 다음 기회에 더 잘할 수 있어요!";
+
+        document.getElementById("score-text").innerHTML = `무작위 <strong>5</strong>문제 중 <strong>${score}</strong>문제를 맞히셨습니다!${feedbackMessage}`;
+    }
+
+    startQuiz();
+</script>
+</body>
+</html>
