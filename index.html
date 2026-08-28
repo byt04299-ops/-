@@ -1,43 +1,54 @@
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>랜덤 5분 상식 퀴즈 (30문제 풀)</title>
+    <title>랜덤 5분 상식 퀴즈</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .quiz-container { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 420px; text-align: center; }
         .timer-box { font-size: 18px; font-weight: bold; color: #e53e3e; margin-bottom: 15px; background-color: #fff5f5; padding: 8px 15px; border-radius: 6px; display: inline-block; }
         h2 { margin-bottom: 15px; color: #333; font-size: 20px; line-height: 1.4; }
+        p { color: #666; font-size: 15px; line-height: 1.5; }
         .feedback { font-size: 20px; font-weight: bold; min-height: 30px; margin-bottom: 15px; }
         .btn-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .btn { padding: 12px; border: 1px solid #ddd; border-radius: 8px; background-color: #fafafa; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .btn:hover:not(:disabled) { background-color: #e2e8f0; }
         .btn:disabled { cursor: not-allowed; }
+        .main-btn { width: 100%; padding: 14px; background-color: #3182ce; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-top: 15px; }
+        .main-btn:hover { background-color: #2b6cb0; }
         .next-btn { padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; display: none; width: 100%; }
-        .restart-btn { margin-top: 15px; width: 100%; background-color: #3182ce; color: white; font-size: 16px; padding: 12px; border-radius: 8px; border: none; cursor: pointer; }
-        .restart-btn:hover { background-color: #2b6cb0; }
     </style>
 </head>
 <body>
 
 <div class="quiz-container">
-    <div id="quiz-box">
+    <!-- 1. 처음에 보이는 시작 화면 -->
+    <div id="start-box">
+        <h2>🧠 도전! 상식 퀴즈 5</h2>
+        <p>수많은 문제 중 무작위로 5문제가 출제됩니다.<br>문제당 제한시간은 <strong>20초</strong>입니다!</p>
+        <button class="main-btn" onclick="startQuiz()">🚀 퀴즈 시작하기</button>
+    </div>
+
+    <!-- 2. 실제 퀴즈 진행 화면 -->
+    <div id="quiz-box" style="display: none;">
         <div class="timer-box">⏱️ 남은 시간: <span id="time-left">20</span>초</div>
         <h2 id="question">질문이 여기에 나옵니다.</h2>
         <div id="feedback" class="feedback"></div>
         <div id="answer-buttons" class="btn-grid"></div>
         <button id="next-btn" class="next-btn" onclick="nextQuestion()">다음 문제</button>
     </div>
+
+    <!-- 3. 결과 화면 -->
     <div id="result-box" style="display: none;">
         <h2>🎉 퀴즈 종료!</h2>
         <p id="score-text" style="font-size: 18px; line-height: 1.6;"></p>
-        <button class="restart-btn" onclick="restartQuiz()">🔄 새로운 무작위 5문제 도전하기</button>
+        <button class="main-btn" onclick="startQuiz()">🔄 새로운 문제로 다시 도전하기</button>
+        <button class="btn" onclick="showStartScreen()" style="width: 100%; margin-top: 10px;">🏠 처음 화면으로 돌아가기</button>
     </div>
 </div>
 
 <script>
-    // 30개의 상식 문제 데이터
     const questionsPool = [
         { question: "우리나라에서 흐르는 길이가 가장 긴 강은?", answers: [ { text: "한강", correct: false }, { text: "낙동강", correct: true }, { text: "금강", correct: false }, { text: "섬진강", correct: false } ] },
         { question: "훈민정음 반포를 기념하는 한글날은?", answers: [ { text: "8월 15일", correct: false }, { text: "10월 3일", correct: false }, { text: "10월 9일", correct: true }, { text: "7월 17일", correct: false } ] },
@@ -87,15 +98,30 @@
         return tempArray;
     }
 
-    function startQuiz() {
-        const shuffledPool = shuffle(questionsPool);
-        currentQuestions = shuffledPool.slice(0, 5); // 30개 중 랜덤 5개 추출
-        currentQuestions.forEach(q => q.answers = shuffle(q.answers));
+    function showStartScreen() {
+        clearInterval(timerInterval);
+        document.getElementById("start-box").style.display = "block";
+        document.getElementById("quiz-box").style.display = "none";
+        document.getElementById("result-box").style.display = "none";
+    }
 
-        currentQuestionIndex = 0;
+    function startQuiz() {
+        // 타이머 및 상태 초기화
+        clearInterval(timerInterval);
         score = 0;
+        currentQuestionIndex = 0;
+
+        // 랜덤 5문제 추출 및 데이터 복사 (오류 방지)
+        const shuffledPool = shuffle(questionsPool);
+        currentQuestions = shuffledPool.slice(0, 5).map(q => ({
+            question: q.question,
+            answers: shuffle(q.answers)
+        }));
+
+        document.getElementById("start-box").style.display = "none";
         document.getElementById("quiz-box").style.display = "block";
         document.getElementById("result-box").style.display = "none";
+        
         showQuestion();
     }
 
@@ -111,6 +137,7 @@
             button.onclick = () => selectAnswer(button, answer.correct);
             document.getElementById("answer-buttons").appendChild(button);
         });
+
         startTimer();
     }
 
@@ -187,14 +214,16 @@
         document.getElementById("result-box").style.display = "block";
         
         let feedbackMessage = "";
-        if (score === 5) feedbackMessage = "<br>👑 만점입니다! 대단해요!";
+        if (score === 5) feedbackMessage = "<br>👑 만점입니다! 상식 왕이시네요!";
         else if (score >= 3) feedbackMessage = "<br>👍 훌륭한 성적입니다!";
         else feedbackMessage = "<br>💡 다음 기회에 더 잘할 수 있어요!";
 
         document.getElementById("score-text").innerHTML = `무작위 <strong>5</strong>문제 중 <strong>${score}</strong>문제를 맞히셨습니다!${feedbackMessage}`;
     }
 
-    startQuiz();
+    // 처음 접속 시 시작 화면 표시
+    showStartScreen();
 </script>
+
 </body>
 </html>
